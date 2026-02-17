@@ -3,34 +3,80 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ToyController</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  text-align: center;
+  margin: 20px;
+}
+
+h2 {
+  font-size: 28px;
+}
+
+button {
+  font-size: 22px;
+  padding: 18px;
+  margin: 10px;
+  width: 90%;
+  border-radius: 10px;
+}
+
+.slider-container {
+  margin: 25px 0;
+}
+
+input[type=range] {
+  width: 95%;
+  height: 40px;
+}
+
+.value-display {
+  font-size: 22px;
+  margin-top: 5px;
+}
+
+.timer-box {
+  font-size: 22px;
+  padding: 10px;
+  width: 100px;
+}
+</style>
 </head>
-<body style="font-family:sans-serif; text-align:center; margin-top:40px;">
+
+<body>
 
 <h2>ToyController</h2>
 
-<button onclick="connectBLE()" style="font-size:20px; padding:15px;">
-Connect
-</button>
+<button onclick="connectBLE()">Connect</button>
 
-<br><br>
+<hr>
 
-<button onclick="sendCommand('R50')" style="font-size:20px; padding:15px;">
-Rotation 50
-</button>
+<div class="slider-container">
+  <h3>Rotation</h3>
+  <input type="range" min="0" max="100" value="50" id="rotSlider">
+  <div class="value-display" id="rotValue">50%</div>
+</div>
 
-<button onclick="sendCommand('S50')" style="font-size:20px; padding:15px;">
-Suction 50
-</button>
+<div class="slider-container">
+  <h3>Vibration</h3>
+  <input type="range" min="0" max="100" value="50" id="vibSlider">
+  <div class="value-display" id="vibValue">50%</div>
+</div>
 
-<button onclick="sendCommand('V50')" style="font-size:20px; padding:15px;">
-Vibration 50
-</button>
+<hr>
 
-<br><br>
+<h3>Suction Cycle</h3>
 
-<button onclick="sendCommand('X0')" style="font-size:20px; padding:15px; background:red; color:white;">
-STOP
-</button>
+<label>ON Time (sec)</label><br>
+<input class="timer-box" type="number" id="onTime" value="10"><br><br>
+
+<label>OFF Time (sec)</label><br>
+<input class="timer-box" type="number" id="offTime" value="5"><br><br>
+
+<button onclick="startSuction()">Start Suction Cycle</button>
+<button onclick="stopAll()" style="background:red;color:white;">STOP ALL</button>
 
 <script>
 
@@ -51,7 +97,7 @@ async function connectBLE() {
     const service = await server.getPrimaryService(serviceUUID);
     characteristic = await service.getCharacteristic(charUUID);
 
-    alert("Connected to ToyController");
+    alert("Connected!");
 
   } catch (error) {
     alert("Connection failed: " + error);
@@ -66,6 +112,57 @@ async function sendCommand(cmd) {
 
   const encoder = new TextEncoder();
   await characteristic.writeValue(encoder.encode(cmd));
+}
+
+// ===== Sliders =====
+
+const rotSlider = document.getElementById("rotSlider");
+const vibSlider = document.getElementById("vibSlider");
+
+rotSlider.oninput = function() {
+  document.getElementById("rotValue").innerText = this.value + "%";
+  sendCommand("R" + this.value);
+};
+
+vibSlider.oninput = function() {
+  document.getElementById("vibValue").innerText = this.value + "%";
+  sendCommand("V" + this.value);
+};
+
+// ===== Suction Timer =====
+
+let suctionInterval;
+
+function startSuction() {
+
+  const onSec = parseInt(document.getElementById("onTime").value);
+  const offSec = parseInt(document.getElementById("offTime").value);
+
+  if (!characteristic) {
+    alert("Not connected");
+    return;
+  }
+
+  clearInterval(suctionInterval);
+
+  let suctionOn = false;
+
+  suctionInterval = setInterval(() => {
+
+    if (suctionOn) {
+      sendCommand("S0");
+    } else {
+      sendCommand("S50");
+    }
+
+    suctionOn = !suctionOn;
+
+  }, (suctionOn ? offSec : onSec) * 1000);
+}
+
+function stopAll() {
+  clearInterval(suctionInterval);
+  sendCommand("X0");
 }
 
 </script>
