@@ -6,41 +6,66 @@
 
 <style>
 body {
+  background: #111;
+  color: #eee;
   font-family: sans-serif;
   text-align: center;
   margin: 20px;
 }
 
 h2 {
+  font-size: 36px;
+  margin-bottom: 20px;
+}
+
+h3 {
   font-size: 28px;
+  margin-bottom: 10px;
 }
 
 button {
-  font-size: 22px;
-  padding: 18px;
-  margin: 10px;
-  width: 90%;
-  border-radius: 10px;
+  font-size: 28px;
+  padding: 20px;
+  margin: 15px;
+  width: 95%;
+  border-radius: 12px;
+  border: none;
+  background: #333;
+  color: white;
 }
 
-.slider-container {
-  margin: 25px 0;
+button:active {
+  background: #555;
 }
 
 input[type=range] {
   width: 95%;
-  height: 40px;
+  height: 50px;
 }
 
 .value-display {
-  font-size: 22px;
-  margin-top: 5px;
+  font-size: 28px;
+  margin-top: 10px;
 }
 
 .timer-box {
-  font-size: 22px;
-  padding: 10px;
-  width: 100px;
+  font-size: 28px;
+  padding: 15px;
+  width: 120px;
+  text-align: center;
+  background: #222;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 8px;
+}
+
+.section {
+  margin: 40px 0;
+}
+
+hr {
+  border: 1px solid #333;
+  margin: 40px 0;
 }
 </style>
 </head>
@@ -49,34 +74,43 @@ input[type=range] {
 
 <h2>ToyController</h2>
 
-<button onclick="connectBLE()">Connect</button>
+<button onclick="connectBLE()">CONNECT</button>
 
 <hr>
 
-<div class="slider-container">
+<div class="section">
   <h3>Rotation</h3>
   <input type="range" min="0" max="100" value="50" id="rotSlider">
   <div class="value-display" id="rotValue">50%</div>
 </div>
 
-<div class="slider-container">
+<div class="section">
   <h3>Vibration</h3>
   <input type="range" min="0" max="100" value="50" id="vibSlider">
   <div class="value-display" id="vibValue">50%</div>
 </div>
 
+<div class="section">
+  <h3>Suction Speed</h3>
+  <input type="range" min="0" max="100" value="50" id="sucSlider">
+  <div class="value-display" id="sucValue">50%</div>
+</div>
+
 <hr>
 
-<h3>Suction Cycle</h3>
+<div class="section">
+  <h3>Suction Cycle Timer</h3>
 
-<label>ON Time (sec)</label><br>
-<input class="timer-box" type="number" id="onTime" value="10"><br><br>
+  <div>ON Time (sec)</div>
+  <input class="timer-box" type="number" id="onTime" value="10"><br><br>
 
-<label>OFF Time (sec)</label><br>
-<input class="timer-box" type="number" id="offTime" value="5"><br><br>
+  <div>OFF Time (sec)</div>
+  <input class="timer-box" type="number" id="offTime" value="5"><br><br>
 
-<button onclick="startSuction()">Start Suction Cycle</button>
-<button onclick="stopAll()" style="background:red;color:white;">STOP ALL</button>
+  <button onclick="startSuction()">START SUCTION CYCLE</button>
+</div>
+
+<button onclick="stopAll()" style="background:#800;">STOP ALL</button>
 
 <script>
 
@@ -105,10 +139,7 @@ async function connectBLE() {
 }
 
 async function sendCommand(cmd) {
-  if (!characteristic) {
-    alert("Not connected");
-    return;
-  }
+  if (!characteristic) return;
 
   const encoder = new TextEncoder();
   await characteristic.writeValue(encoder.encode(cmd));
@@ -118,6 +149,7 @@ async function sendCommand(cmd) {
 
 const rotSlider = document.getElementById("rotSlider");
 const vibSlider = document.getElementById("vibSlider");
+const sucSlider = document.getElementById("sucSlider");
 
 rotSlider.oninput = function() {
   document.getElementById("rotValue").innerText = this.value + "%";
@@ -129,14 +161,20 @@ vibSlider.oninput = function() {
   sendCommand("V" + this.value);
 };
 
-// ===== Suction Timer =====
+sucSlider.oninput = function() {
+  document.getElementById("sucValue").innerText = this.value + "%";
+};
+
+// ===== Suction Cycle =====
 
 let suctionInterval;
+let suctionOn = false;
 
 function startSuction() {
 
   const onSec = parseInt(document.getElementById("onTime").value);
   const offSec = parseInt(document.getElementById("offTime").value);
+  const speed = sucSlider.value;
 
   if (!characteristic) {
     alert("Not connected");
@@ -145,19 +183,19 @@ function startSuction() {
 
   clearInterval(suctionInterval);
 
-  let suctionOn = false;
+  suctionOn = false;
 
   suctionInterval = setInterval(() => {
 
     if (suctionOn) {
       sendCommand("S0");
     } else {
-      sendCommand("S50");
+      sendCommand("S" + speed);
     }
 
     suctionOn = !suctionOn;
 
-  }, (suctionOn ? offSec : onSec) * 1000);
+  }, suctionOn ? offSec * 1000 : onSec * 1000);
 }
 
 function stopAll() {
