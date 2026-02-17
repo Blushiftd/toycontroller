@@ -5,15 +5,33 @@
 </head>
 <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
 
-<h1>Click Test</h1>
+<h2>BLE Direct Test</h2>
 
-<button id="btn" style="font-size:24px; padding:20px;">
-PRESS ME
+<button id="connectBtn" style="font-size:24px; padding:20px;">
+CONNECT
 </button>
 
 <script>
-document.getElementById("btn").addEventListener("click", function() {
-  alert("Button works");
+document.getElementById("connectBtn").addEventListener("click", async function() {
+
+  if (!navigator.bluetooth) {
+    alert("Web Bluetooth NOT supported in this browser.");
+    return;
+  }
+
+  try {
+    alert("Calling requestDevice...");
+    
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true
+    });
+
+    alert("Device chosen: " + device.name);
+
+  } catch (error) {
+    alert("BLE Error: " + error);
+  }
+
 });
 </script>
 
