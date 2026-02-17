@@ -2,37 +2,72 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ToyController</title>
 </head>
-<body style="font-family:sans-serif; text-align:center; margin-top:50px;">
+<body style="font-family:sans-serif; text-align:center; margin-top:40px;">
 
-<h2>BLE Direct Test</h2>
+<h2>ToyController</h2>
 
-<button id="connectBtn" style="font-size:24px; padding:20px;">
-CONNECT
+<button onclick="connectBLE()" style="font-size:20px; padding:15px;">
+Connect
+</button>
+
+<br><br>
+
+<button onclick="sendCommand('R50')" style="font-size:20px; padding:15px;">
+Rotation 50
+</button>
+
+<button onclick="sendCommand('S50')" style="font-size:20px; padding:15px;">
+Suction 50
+</button>
+
+<button onclick="sendCommand('V50')" style="font-size:20px; padding:15px;">
+Vibration 50
+</button>
+
+<br><br>
+
+<button onclick="sendCommand('X0')" style="font-size:20px; padding:15px; background:red; color:white;">
+STOP
 </button>
 
 <script>
-document.getElementById("connectBtn").addEventListener("click", async function() {
 
-  if (!navigator.bluetooth) {
-    alert("Web Bluetooth NOT supported in this browser.");
+let device;
+let characteristic;
+
+const serviceUUID = "00001234-0000-1000-8000-00805f9b34fb";
+const charUUID = "00005678-0000-1000-8000-00805f9b34fb";
+
+async function connectBLE() {
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ name: "ToyController" }],
+      optionalServices: [serviceUUID]
+    });
+
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService(serviceUUID);
+    characteristic = await service.getCharacteristic(charUUID);
+
+    alert("Connected to ToyController");
+
+  } catch (error) {
+    alert("Connection failed: " + error);
+  }
+}
+
+async function sendCommand(cmd) {
+  if (!characteristic) {
+    alert("Not connected");
     return;
   }
 
-  try {
-    alert("Calling requestDevice...");
-    
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true
-    });
+  const encoder = new TextEncoder();
+  await characteristic.writeValue(encoder.encode(cmd));
+}
 
-    alert("Device chosen: " + device.name);
-
-  } catch (error) {
-    alert("BLE Error: " + error);
-  }
-
-});
 </script>
 
 </body>
