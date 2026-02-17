@@ -14,21 +14,21 @@ body {
 }
 
 h2 {
-  font-size: 36px;
+  font-size: 38px;
   margin-bottom: 20px;
 }
 
 h3 {
-  font-size: 28px;
+  font-size: 30px;
   margin-bottom: 10px;
 }
 
 button {
   font-size: 28px;
-  padding: 20px;
+  padding: 22px;
   margin: 15px;
   width: 95%;
-  border-radius: 12px;
+  border-radius: 14px;
   border: none;
   background: #333;
   color: white;
@@ -38,25 +38,29 @@ button:active {
   background: #555;
 }
 
+.stop {
+  background: #800;
+}
+
 input[type=range] {
   width: 95%;
-  height: 50px;
+  height: 55px;
 }
 
 .value-display {
-  font-size: 28px;
+  font-size: 30px;
   margin-top: 10px;
 }
 
 .timer-box {
   font-size: 28px;
   padding: 15px;
-  width: 120px;
+  width: 130px;
   text-align: center;
   background: #222;
   color: white;
   border: 1px solid #444;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .section {
@@ -110,12 +114,13 @@ hr {
   <button onclick="startSuction()">START SUCTION CYCLE</button>
 </div>
 
-<button onclick="stopAll()" style="background:#800;">STOP ALL</button>
+<button onclick="stopAll()" class="stop">STOP ALL</button>
 
 <script>
 
 let device;
 let characteristic;
+let suctionRunning = false;
 
 const serviceUUID = "00001234-0000-1000-8000-00805f9b34fb";
 const charUUID = "00005678-0000-1000-8000-00805f9b34fb";
@@ -145,61 +150,69 @@ async function sendCommand(cmd) {
   await characteristic.writeValue(encoder.encode(cmd));
 }
 
-// ===== Sliders =====
+// ===== Rotation Slider =====
 
 const rotSlider = document.getElementById("rotSlider");
-const vibSlider = document.getElementById("vibSlider");
-const sucSlider = document.getElementById("sucSlider");
-
 rotSlider.oninput = function() {
   document.getElementById("rotValue").innerText = this.value + "%";
   sendCommand("R" + this.value);
 };
 
+// ===== Vibration Slider =====
+
+const vibSlider = document.getElementById("vibSlider");
 vibSlider.oninput = function() {
   document.getElementById("vibValue").innerText = this.value + "%";
   sendCommand("V" + this.value);
 };
 
+// ===== Suction Slider =====
+
+const sucSlider = document.getElementById("sucSlider");
 sucSlider.oninput = function() {
   document.getElementById("sucValue").innerText = this.value + "%";
 };
 
-// ===== Suction Cycle =====
-
-let suctionInterval;
-let suctionOn = false;
+// ===== Suction Cycle Logic =====
 
 function startSuction() {
-
-  const onSec = parseInt(document.getElementById("onTime").value);
-  const offSec = parseInt(document.getElementById("offTime").value);
-  const speed = sucSlider.value;
 
   if (!characteristic) {
     alert("Not connected");
     return;
   }
 
-  clearInterval(suctionInterval);
+  suctionRunning = true;
+  runCycle();
+}
 
-  suctionOn = false;
+function runCycle() {
 
-  suctionInterval = setInterval(() => {
+  if (!suctionRunning) return;
 
-    if (suctionOn) {
-      sendCommand("S0");
-    } else {
-      sendCommand("S" + speed);
-    }
+  const onSec = parseInt(document.getElementById("onTime").value);
+  const offSec = parseInt(document.getElementById("offTime").value);
+  const speed = sucSlider.value;
 
-    suctionOn = !suctionOn;
+  // Turn suction ON (fires solenoid)
+  sendCommand("S" + speed);
 
-  }, suctionOn ? offSec * 1000 : onSec * 1000);
+  setTimeout(() => {
+
+    if (!suctionRunning) return;
+
+    // Turn suction OFF (releases solenoid)
+    sendCommand("S0");
+
+    setTimeout(() => {
+      runCycle();
+    }, offSec * 1000);
+
+  }, onSec * 1000);
 }
 
 function stopAll() {
-  clearInterval(suctionInterval);
+  suctionRunning = false;
   sendCommand("X0");
 }
 
